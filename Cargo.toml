@@ -1,0 +1,7 @@
+[package]
+name = "dotrust"
+version = "0.1.0"
+authors = ["gsfraley <gsfraley@gmail.com>"]
+
+[dependencies]
+libloading = "0.4.1"
