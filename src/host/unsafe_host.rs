@@ -2,7 +2,7 @@ use std::os::raw::{c_char, c_int, c_uint, c_void};
 
 #[link(name = "coreclr")]
 extern {
-    fn coreclr_initialize(
+    pub fn coreclr_initialize(
         exe_path: *const c_char,
         app_domain_friendly_name: *const c_char,
         property_count: c_int,
@@ -11,16 +11,16 @@ extern {
         host_handle: *const *const c_void,
         domain_id: *const c_uint) -> c_int;
     
-    fn coreclr_shutdown(
+    pub fn coreclr_shutdown(
         host_handle: *const c_void,
         domain_id: c_uint) -> c_int;
     
-    fn coreclr_shutdown_2(
+    pub fn coreclr_shutdown_2(
         host_handle: *const c_void,
         domain_id: c_uint,
         latched_exit_code: *const c_int) -> c_int;
     
-    fn coreclr_create_delegate(
+    pub fn coreclr_create_delegate(
         host_handle: *const c_void,
         domain_id: c_uint,
         entry_point_assembly_name: *const c_char,
@@ -28,7 +28,7 @@ extern {
         entry_point_method_name: *const c_char,
         delegate: *const *const c_void) -> c_int;
     
-    fn coreclr_execute_assembly(
+    pub fn coreclr_execute_assembly(
         host_handle: *const c_void,
         domain_id: c_uint,
         argc: c_int,
