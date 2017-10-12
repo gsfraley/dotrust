@@ -73,21 +73,22 @@ impl CoreClr {
             let coreclr_library = CoreClr::library()?;
             let coreclr_initialize_fn: libl::Symbol<CoreClrInitializeFn> = coreclr_library.get(b"coreclr_initialize")?;
 
-            assert_eq!(
-                coreclr_initialize_fn(
-                    exe_path_raw,
-                    app_domain_friendly_name_raw,
-                    properties_count,
-                    properties_keys_ref,
-                    properties_values_ref,
-                    host_handle_ref,
-                    domain_id_ref), 0);
+            match coreclr_initialize_fn(
+                exe_path_raw,
+                app_domain_friendly_name_raw,
+                properties_count,
+                properties_keys_ref,
+                properties_values_ref,
+                host_handle_ref,
+                domain_id_ref)
+            {
+                0 => Ok(CoreClr {
+                    host_handle: host_handle,
+                    domain_id: domain_id
+                }),
+                _ => panic!("Failed to initialize")
+            }
         }
-
-        Ok(CoreClr {
-            host_handle: host_handle,
-            domain_id: domain_id
-        })
     }
 
     pub fn shutdown(self: Self) -> io::Result<()> {
