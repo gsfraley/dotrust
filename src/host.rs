@@ -22,6 +22,8 @@ pub type CoreClrInitializeFn = unsafe extern fn(
     *const *const c_void,
     *const c_uint) -> c_int;
 
+pub type CoreClrShutdownFn = unsafe extern fn(*const c_void, c_uint);
+
 impl CoreClr {
     pub fn init(
         exe_path: &str,
@@ -71,5 +73,16 @@ impl CoreClr {
             host_handle: host_handle,
             domain_id: domain_id
         })
+    }
+
+    pub fn shutdown(self: Self) -> libl::Result<()> {
+        let coreclr_library = libl::Library::new("/usr/local/share/dotnet/shared/Microsoft.NETCore.App/2.0.0")?;
+
+        unsafe {
+            let coreclr_shutdown_fn: libl::Symbol<CoreClrShutdownFn> = coreclr_library.get(b"coreclr_shutdown")?;
+            assert_eq!(coreclr_shutdown_fn(self.host_handle, self.domain_id), 0)
+        }
+
+        Ok(())
     }
 }
