@@ -12,7 +12,7 @@ fn to_c_str<T: Into<Vec<u8>>>(t: T) -> *const c_char {
 }
 
 
-// -- Model the functions we'll dynamically load -- //
+/// A function pointer type for the init function
 pub type CoreClrInitializeFn = unsafe extern fn(
     *const c_char,
     *const c_char,
@@ -22,22 +22,26 @@ pub type CoreClrInitializeFn = unsafe extern fn(
     *const *const c_void,
     *const c_uint) -> c_int;
 
+/// A function pointer type for the shutdown function
 pub type CoreClrShutdownFn = unsafe extern fn(*const c_void, c_uint) -> c_int;
 
+/// A function pointer type for the second shutdown function
 pub type CoreClrShutdown2Fn = unsafe extern fn(*const c_void, c_uint, *const c_int) -> c_int;
 
-
-// -- Model the CLR -- //
+/// The CoreClr object represents a binding to the CLR maintained by a private handle and domain id
+/// So far, it can only be created and destroyed.  Please contribute!
 pub struct CoreClr {
     host_handle: *const c_void,
     domain_id: c_uint
 }
 
 impl CoreClr {
+    /// Private helper function to grab a reference to the library in the current context
     fn library() -> libl::Result<libl::Library> {
         libl::Library::new("/usr/local/share/dotnet/shared/Microsoft.NETCore.App/2.0.0")
     }
 
+    /// Creates a new CLR object
     pub fn init(
         exe_path: &str,
         app_domain_friendly_name: &str,
@@ -101,6 +105,7 @@ impl CoreClr {
         }
     }
 
+    /// Shuts down the CLR
     pub fn shutdown(self: Self) -> io::Result<()> {
         unsafe {
             let coreclr_library = CoreClr::library()?;
@@ -116,6 +121,7 @@ impl CoreClr {
         }
     }
 
+    /// Shuts down the CLR, returning a latched exit code?  Should follow up on what that is.
     pub fn shutdown_2(self: Self) -> io::Result<c_int> {
         let latched_exit_code = -1 as c_int;
         let latched_exit_code_ref = &latched_exit_code as *const c_int;
