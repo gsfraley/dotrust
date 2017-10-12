@@ -5,15 +5,14 @@ use std::ffi::CString;
 use std::io;
 use std::os::raw::{c_char, c_int, c_uint, c_void};
 
+
+// -- Private utility functions -- //
 fn to_c_str<T: Into<Vec<u8>>>(t: T) -> *const c_char {
     CString::new(t).unwrap().as_ptr() as *const c_char
 }
 
-pub struct CoreClr {
-    host_handle: *const c_void,
-    domain_id: c_uint
-}
 
+// -- Model the functions we'll dynamically load -- //
 pub type CoreClrInitializeFn = unsafe extern fn(
     *const c_char,
     *const c_char,
@@ -24,7 +23,15 @@ pub type CoreClrInitializeFn = unsafe extern fn(
     *const c_uint) -> c_int;
 
 pub type CoreClrShutdownFn = unsafe extern fn(*const c_void, c_uint) -> c_int;
+
 pub type CoreClrShutdown2Fn = unsafe extern fn(*const c_void, c_uint, *const c_int) -> c_int;
+
+
+// -- Model the CLR -- //
+pub struct CoreClr {
+    host_handle: *const c_void,
+    domain_id: c_uint
+}
 
 impl CoreClr {
     fn library() -> libl::Result<libl::Library> {
@@ -68,12 +75,13 @@ impl CoreClr {
         let properties_keys_ref = &properties_keys[0] as *const *const c_char;
         let properties_values_ref = &properties_values[0] as *const *const c_char;
 
-        
+        // Open up an unsafe block for actually loading functions from the CLR libs
         unsafe {
             let coreclr_library = CoreClr::library()?;
-            let coreclr_initialize_fn: libl::Symbol<CoreClrInitializeFn> = coreclr_library.get(b"coreclr_initialize")?;
+            let coreclr_initialize: libl::Symbol<CoreClrInitializeFn> = coreclr_library.get(b"coreclr_initialize")?;
 
-            match coreclr_initialize_fn(
+            // Initialize the CLR
+            match coreclr_initialize(
                 exe_path_raw,
                 app_domain_friendly_name_raw,
                 properties_count,
@@ -82,10 +90,12 @@ impl CoreClr {
                 host_handle_ref,
                 domain_id_ref)
             {
+                // If healthy exit code, return a model of the CLR
                 0 => Ok(CoreClr {
                     host_handle: host_handle,
                     domain_id: domain_id
                 }),
+                // Else panic
                 _ => panic!("Failed to initialize")
             }
         }
@@ -96,8 +106,11 @@ impl CoreClr {
             let coreclr_library = CoreClr::library()?;
             let coreclr_shutdown_fn: libl::Symbol<CoreClrShutdownFn> = coreclr_library.get(b"coreclr_shutdown")?;
 
+            // Shutdown the CLR
             match coreclr_shutdown_fn(self.host_handle, self.domain_id) {
+                // If healthy exit code, return unit
                 0 => Ok(()),
+                // Else panic
                 _ => panic!("Failed to shutdown")
             }
         }
@@ -111,8 +124,11 @@ impl CoreClr {
             let coreclr_library = CoreClr::library()?;
             let coreclr_shutdown_2_fn: libl::Symbol<CoreClrShutdown2Fn> = coreclr_library.get(b"coreclr_shutdown_2")?;
 
+            // Shutdown the CLR
             match coreclr_shutdown_2_fn(self.host_handle, self.domain_id, latched_exit_code_ref) {
+                // If healthy exit code, return the resulting exit code
                 0 => Ok(latched_exit_code),
+                // Else panic
                 _ => panic!("Failed to shutdown")
             }
         }
