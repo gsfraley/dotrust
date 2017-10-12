@@ -104,10 +104,10 @@ impl CoreClr {
     pub fn shutdown(self: Self) -> io::Result<()> {
         unsafe {
             let coreclr_library = CoreClr::library()?;
-            let coreclr_shutdown_fn: libl::Symbol<CoreClrShutdownFn> = coreclr_library.get(b"coreclr_shutdown")?;
+            let coreclr_shutdown: libl::Symbol<CoreClrShutdownFn> = coreclr_library.get(b"coreclr_shutdown")?;
 
             // Shutdown the CLR
-            match coreclr_shutdown_fn(self.host_handle, self.domain_id) {
+            match coreclr_shutdown(self.host_handle, self.domain_id) {
                 // If healthy exit code, return unit
                 0 => Ok(()),
                 // Else panic
@@ -122,10 +122,10 @@ impl CoreClr {
 
         unsafe {
             let coreclr_library = CoreClr::library()?;
-            let coreclr_shutdown_2_fn: libl::Symbol<CoreClrShutdown2Fn> = coreclr_library.get(b"coreclr_shutdown_2")?;
+            let coreclr_shutdown_2: libl::Symbol<CoreClrShutdown2Fn> = coreclr_library.get(b"coreclr_shutdown_2")?;
 
             // Shutdown the CLR
-            match coreclr_shutdown_2_fn(self.host_handle, self.domain_id, latched_exit_code_ref) {
+            match coreclr_shutdown_2(self.host_handle, self.domain_id, latched_exit_code_ref) {
                 // If healthy exit code, return the resulting exit code
                 0 => Ok(latched_exit_code),
                 // Else panic
