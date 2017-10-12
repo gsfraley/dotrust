@@ -1,4 +1,4 @@
-# dotrust ![Travis build status](https://travis-ci.org/gsfraley/dotRUST.svg?branch=master)
+# dotRUST ![Travis build status](https://travis-ci.org/gsfraley/dotRUST.svg?branch=master)
 
 [Crates](https://crates.io/crates/dotrust) | [Docs](https://docs.rs/dotrust)
 
