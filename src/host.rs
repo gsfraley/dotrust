@@ -13,7 +13,7 @@ fn to_c_str<T: Into<Vec<u8>>>(t: T) -> *const c_char {
 
 
 /// A function pointer type for the init function
-pub type CoreClrInitializeFn = unsafe extern fn(
+type CoreClrInitializeFn = unsafe extern fn(
     *const c_char,
     *const c_char,
     c_int,
@@ -23,10 +23,19 @@ pub type CoreClrInitializeFn = unsafe extern fn(
     *const c_uint) -> c_int;
 
 /// A function pointer type for the shutdown function
-pub type CoreClrShutdownFn = unsafe extern fn(*const c_void, c_uint) -> c_int;
+type CoreClrShutdownFn = unsafe extern fn(*const c_void, c_uint) -> c_int;
 
 /// A function pointer type for the second shutdown function
-pub type CoreClrShutdown2Fn = unsafe extern fn(*const c_void, c_uint, *const c_int) -> c_int;
+type CoreClrShutdown2Fn = unsafe extern fn(*const c_void, c_uint, *const c_int) -> c_int;
+
+/// A function pointer type for the create delegate function
+type CoreClrCreateDelegateFn = unsafe extern fn(
+    *const c_void,
+    c_uint,
+    *const c_char,
+    *const c_char,
+    *const c_char,
+    *const *const c_void) -> c_int;
 
 /// The CoreClr object represents a binding to the CLR maintained by a private handle and domain id
 /// So far, it can only be created and destroyed.  Please contribute!
@@ -34,6 +43,8 @@ pub struct CoreClr {
     host_handle: *const c_void,
     domain_id: c_uint
 }
+
+pub type CoreClrDelegate = *const c_void;
 
 impl CoreClr {
     /// Private helper function to grab a reference to the library in the current context
@@ -134,6 +145,32 @@ impl CoreClr {
             match coreclr_shutdown_2(self.host_handle, self.domain_id, latched_exit_code_ref) {
                 // If healthy exit code, return the resulting exit code
                 0 => Ok(latched_exit_code),
+                // Else panic
+                _ => panic!("Failed to shutdown")
+            }
+        }
+    }
+
+    /// Spins a raw delegate pointer out of the CLR
+    pub fn create_raw_delegate(self: &Self) -> io::Result<*const c_void> {
+        let coreclr_delegate = 0 as *const c_void;
+        let coreclr_delegate_ref = &coreclr_delegate as *const *const c_void;
+        
+        unsafe {
+            let coreclr_library = CoreClr::library()?;
+            let coreclr_create_delegate: libl::Symbol<CoreClrCreateDelegateFn> = coreclr_library.get(b"coreclr_create_delegate")?;
+
+            // Create the delegate
+            match coreclr_create_delegate(
+                self.host_handle,
+                self.domain_id,
+                0 as *const c_char,
+                0 as *const c_char,
+                0 as *const c_char,
+                coreclr_delegate_ref)
+            {
+                // If healthy exit code, return the resulting exit code
+                0 => Ok(coreclr_delegate),
                 // Else panic
                 _ => panic!("Failed to shutdown")
             }
