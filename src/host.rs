@@ -1,3 +1,5 @@
+//! Hosting the CLR from Rust
+
 extern crate libloading as libl;
 
 use std::collections::HashMap;
@@ -38,13 +40,10 @@ type CoreClrCreateDelegateFn = unsafe extern fn(
     *const *const c_void) -> c_int;
 
 /// The CoreClr object represents a binding to the CLR maintained by a private handle and domain id
-/// So far, it can only be created and destroyed.  Please contribute!
 pub struct CoreClr {
     host_handle: *const c_void,
     domain_id: c_uint
 }
-
-pub type CoreClrDelegate = *const c_void;
 
 impl CoreClr {
     /// Private helper function to grab a reference to the library in the current context
