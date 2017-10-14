@@ -1,6 +1,6 @@
 # dotrust ![Travis build status](https://travis-ci.org/gsfraley/dotrust.svg?branch=master)
 
-[Crates](https://crates.io/crates/dotrust) | [Docs](https://docs.rs/dotrust)
+[Crates](https://crates.io/crates/dotrust) | [Docs](https://docs.rs/dotrust) | [Build](https://travis-ci.org/gsfraley/dotrust)
 
 
 ## Why?
