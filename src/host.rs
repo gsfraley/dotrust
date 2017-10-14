@@ -151,7 +151,12 @@ impl CoreClr {
     }
 
     /// Spins a raw delegate pointer out of the CLR
-    pub fn create_raw_delegate(self: &Self) -> io::Result<*const c_void> {
+    pub fn create_raw_delegate(
+        self: &Self,
+        entry_point_assembly_name: &str,
+        entry_point_type_name: &str,
+        entry_point_method_name: &str) -> io::Result<*const c_void>
+    {
         let coreclr_delegate = 0 as *const c_void;
         let coreclr_delegate_ref = &coreclr_delegate as *const *const c_void;
         
@@ -163,9 +168,9 @@ impl CoreClr {
             match coreclr_create_delegate(
                 self.host_handle,
                 self.domain_id,
-                0 as *const c_char,
-                0 as *const c_char,
-                0 as *const c_char,
+                to_c_str(entry_point_assembly_name),
+                to_c_str(entry_point_type_name),
+                to_c_str(entry_point_method_name),
                 coreclr_delegate_ref)
             {
                 // If healthy exit code, return the resulting exit code
