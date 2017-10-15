@@ -1,6 +1,6 @@
 [package]
 name = "dotrust"
-version = "0.2.1"
+version = "0.2.3"
 authors = ["gsfraley <gsfraley@gmail.com>"]
 
 description = "Bindings and libraries for interacting with .NET from Rust"
