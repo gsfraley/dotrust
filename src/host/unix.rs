@@ -86,8 +86,8 @@ impl CoreClr {
                 .collect();
 
         // Grab refs of the two to pass into the actual function call
-        let properties_keys_ref = &properties_keys[0] as *const *const c_char;
-        let properties_values_ref = &properties_values[0] as *const *const c_char;
+        let properties_keys_ref = properties_keys.as_ptr();
+        let properties_values_ref = properties_values.as_ptr();
 
         // Open up an unsafe block for actually loading functions from the CLR libs
         unsafe {
