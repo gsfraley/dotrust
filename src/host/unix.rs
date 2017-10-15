@@ -1,4 +1,4 @@
-//! Hosting the CLR from Rust
+//! Hosting the CLR from unix with Rust
 
 extern crate libloading as libl;
 
