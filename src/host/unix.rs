@@ -40,12 +40,12 @@ type CoreClrCreateDelegateFn = unsafe extern fn(
     *const *const c_void) -> c_int;
 
 /// The CoreClr object represents a binding to the CLR maintained by a private handle and domain id
-pub struct CoreClr {
+pub struct UnixCoreClr {
     host_handle: *const c_void,
     domain_id: c_uint
 }
 
-impl CoreClr {
+impl UnixCoreClr {
     /// Private helper function to grab a reference to the library in the current context
     fn library() -> libl::Result<libl::Library> {
         libl::Library::new("/usr/local/share/dotnet/shared/Microsoft.NETCore.App/2.0.0/libcoreclr.dylib")
@@ -55,7 +55,7 @@ impl CoreClr {
     pub fn init(
         exe_path: &str,
         app_domain_friendly_name: &str,
-        properties_option: Option<HashMap<&str, &str>>) -> libl::Result<CoreClr>
+        properties_option: Option<HashMap<&str, &str>>) -> libl::Result<UnixCoreClr>
     {
         // Create the host handle and its ref
         let host_handle = 0 as *const c_void;
@@ -91,7 +91,7 @@ impl CoreClr {
 
         // Open up an unsafe block for actually loading functions from the CLR libs
         unsafe {
-            let coreclr_library = CoreClr::library()?;
+            let coreclr_library = UnixCoreClr::library()?;
             let coreclr_initialize: libl::Symbol<CoreClrInitializeFn> = coreclr_library.get(b"coreclr_initialize")?;
 
             // Initialize the CLR
@@ -105,12 +105,12 @@ impl CoreClr {
                 domain_id_ref)
             {
                 // If healthy exit code, return a model of the CLR
-                0 => Ok(CoreClr {
+                0 => Ok(UnixCoreClr {
                     host_handle: host_handle,
                     domain_id: domain_id
                 }),
                 // Else panic
-                _ => panic!("Failed to initialize, {:?} {:?}", host_handle, domain_id)
+                code => panic!("Failed to initialize ({:X}).  Host handle -- {:?}, domain id -- {:?}.", code, host_handle, domain_id)
             }
         }
     }
@@ -118,7 +118,7 @@ impl CoreClr {
     /// Shuts down the CLR
     pub fn shutdown(self: Self) -> io::Result<()> {
         unsafe {
-            let coreclr_library = CoreClr::library()?;
+            let coreclr_library = UnixCoreClr::library()?;
             let coreclr_shutdown: libl::Symbol<CoreClrShutdownFn> = coreclr_library.get(b"coreclr_shutdown")?;
 
             // Shutdown the CLR
@@ -137,7 +137,7 @@ impl CoreClr {
         let latched_exit_code_ref = &latched_exit_code as *const c_int;
 
         unsafe {
-            let coreclr_library = CoreClr::library()?;
+            let coreclr_library = UnixCoreClr::library()?;
             let coreclr_shutdown_2: libl::Symbol<CoreClrShutdown2Fn> = coreclr_library.get(b"coreclr_shutdown_2")?;
 
             // Shutdown the CLR
@@ -161,7 +161,7 @@ impl CoreClr {
         let coreclr_delegate_ref = &coreclr_delegate as *const *const c_void;
         
         unsafe {
-            let coreclr_library = CoreClr::library()?;
+            let coreclr_library = UnixCoreClr::library()?;
             let coreclr_create_delegate: libl::Symbol<CoreClrCreateDelegateFn> = coreclr_library.get(b"coreclr_create_delegate")?;
 
             // Create the delegate
@@ -179,16 +179,5 @@ impl CoreClr {
                 _ => panic!("Failed to shutdown")
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::CoreClr;
-
-    #[test]
-    fn init_and_shutdown() {
-        let coreclr = CoreClr::init("", "", None).unwrap();
-        coreclr.shutdown();
     }
 }
