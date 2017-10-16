@@ -48,7 +48,7 @@ pub struct CoreClr {
 impl CoreClr {
     /// Private helper function to grab a reference to the library in the current context
     fn library() -> libl::Result<libl::Library> {
-        libl::Library::new("/usr/local/share/dotnet/shared/Microsoft.NETCore.App/2.0.0")
+        libl::Library::new("/usr/local/share/dotnet/shared/Microsoft.NETCore.App/2.0.0/libcoreclr.dylib")
     }
 
     /// Creates a new CLR object
@@ -110,7 +110,7 @@ impl CoreClr {
                     domain_id: domain_id
                 }),
                 // Else panic
-                _ => panic!("Failed to initialize")
+                _ => panic!("Failed to initialize, {:?} {:?}", host_handle, domain_id)
             }
         }
     }
@@ -179,5 +179,16 @@ impl CoreClr {
                 _ => panic!("Failed to shutdown")
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CoreClr;
+
+    #[test]
+    fn init_and_shutdown() {
+        let coreclr = CoreClr::init("", "", None).unwrap();
+        coreclr.shutdown();
     }
 }
