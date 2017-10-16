@@ -110,7 +110,7 @@ impl UnixCoreClr {
                     domain_id: domain_id
                 }),
                 // Else panic
-                code => panic!("Failed to initialize ({:X}).  Host handle -- {:?}, domain id -- {:?}.", code, host_handle, domain_id)
+                code => panic!("Failed to initialize ({:X}).  Host handle: {:?}, domain id: {:?}.", code, host_handle, domain_id)
             }
         }
     }
