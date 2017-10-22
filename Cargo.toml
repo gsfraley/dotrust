@@ -1,6 +1,6 @@
 [package]
 name = "dotrust"
-version = "0.2.3"
+version = "0.3.0"
 authors = ["gsfraley <gsfraley@gmail.com>"]
 
 description = "Bindings and libraries for interacting with .NET from Rust"
@@ -11,4 +11,6 @@ documentation = "https://docs.rs/dotrust"
 
 
 [dependencies]
+com-rs = "0.2.0"
 libloading = "0.4.1"
+winapi = "0.2.8"
