@@ -1,3 +1,5 @@
+//! Hosting the CLR from Rust using the Windows hosting API (ICLRRuntimeHost2 from MSCOREE.IDL)
+
 use com::IUnknown;
 use winapi::minwindef::DWORD;
 use winapi::winerror::HRESULT;
