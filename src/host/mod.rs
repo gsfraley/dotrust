@@ -13,7 +13,7 @@ trait ClrHost {
         assembly_path: &str,
         args: Vec<&str>) -> io::Result<i32>;
 
-    fn create_raw_delegate<T>(self: &Self,
+    unsafe fn create_delegate<T>(self: &Self,
         assembly_name: &str,
         class_name: &str,
         method_name: &str) -> io::Result<Box<T>>;
@@ -43,11 +43,11 @@ pub mod tests {
                 Ok(0)
         }
 
-        fn create_raw_delegate<T>(self: &Self,
+        unsafe fn create_delegate<T>(self: &Self,
             _assembly_name: &str,
             _class_name: &str,
             _method_name: &str) -> io::Result<Box<T>> {
-                let boxed_null: Box<T> = unsafe { Box::from_raw(null_mut()) };
+                let boxed_null: Box<T> = Box::from_raw(null_mut());
                 Ok(boxed_null)
         }
     }
@@ -58,9 +58,11 @@ pub mod tests {
         healthy_clr_host.get_app_domain_id().unwrap();
         healthy_clr_host.execute_assembly("./my_assembly", vec![]).unwrap();
 
-        let _delegate: Box<()> = healthy_clr_host
-            .create_raw_delegate("./my_assembly", "Null", "value")
-            .unwrap();
+        let _delegate: Box<()> = unsafe {
+            healthy_clr_host
+                .create_delegate("./my_assembly", "Null", "value")
+                .unwrap()
+        };
         
         healthy_clr_host.stop().unwrap();
     }
