@@ -1,7 +1,5 @@
 //! Hosting the CLR from unix with Rust
 
-extern crate libloading as libl;
-
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::io;
