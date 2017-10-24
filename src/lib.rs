@@ -9,4 +9,7 @@ extern crate winapi;
 #[macro_use]
 extern crate com_rs as com;
 
+#[cfg(unix)]
+extern crate libloading as libl;
+
 pub mod host;

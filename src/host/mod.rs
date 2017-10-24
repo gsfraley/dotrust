@@ -5,6 +5,9 @@ use std::io;
 #[cfg(windows)]
 pub mod windows;
 
+#[cfg(unix)]
+pub mod unix;
+
 trait ClrHost {
     fn get_app_domain_id(self: &Self) -> io::Result<i32>;
     fn stop(self: Self) -> io::Result<()>;
