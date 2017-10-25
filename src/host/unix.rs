@@ -7,6 +7,8 @@ use std::ffi::CString;
 use std::io;
 use std::os::raw::{c_char, c_int, c_uint, c_void};
 
+use super::ClrHost;
+
 
 // -- Private utility functions -- //
 fn to_c_str<T: Into<Vec<u8>>>(t: T) -> *const c_char {
@@ -40,12 +42,12 @@ type CoreClrCreateDelegateFn = unsafe extern fn(
     *const *const c_void) -> c_int;
 
 /// The CoreClr object represents a binding to the CLR maintained by a private handle and domain id
-pub struct UnixCoreClr {
+pub struct UnixCoreClrHost {
     host_handle: *const c_void,
     domain_id: c_uint
 }
 
-impl UnixCoreClr {
+impl UnixCoreClrHost {
     /// Private helper function to grab a reference to the library in the current context
     fn library() -> libl::Result<libl::Library> {
         libl::Library::new("/usr/local/share/dotnet/shared/Microsoft.NETCore.App/2.0.0/libcoreclr.dylib")
@@ -55,7 +57,7 @@ impl UnixCoreClr {
     pub fn init(
         exe_path: &str,
         app_domain_friendly_name: &str,
-        properties_option: Option<HashMap<&str, &str>>) -> libl::Result<UnixCoreClr>
+        properties_option: Option<HashMap<&str, &str>>) -> libl::Result<UnixCoreClrHost>
     {
         // Create the host handle and its ref
         let host_handle = 0 as *const c_void;
@@ -91,7 +93,7 @@ impl UnixCoreClr {
 
         // Open up an unsafe block for actually loading functions from the CLR libs
         unsafe {
-            let coreclr_library = UnixCoreClr::library()?;
+            let coreclr_library = UnixCoreClrHost::library()?;
             let coreclr_initialize: libl::Symbol<CoreClrInitializeFn> = coreclr_library.get(b"coreclr_initialize")?;
 
             // Initialize the CLR
@@ -105,47 +107,12 @@ impl UnixCoreClr {
                 domain_id_ref)
             {
                 // If healthy exit code, return a model of the CLR
-                0 => Ok(UnixCoreClr {
+                0 => Ok(UnixCoreClrHost {
                     host_handle: host_handle,
                     domain_id: domain_id
                 }),
                 // Else panic
                 code => panic!("Failed to initialize ({:X}).  Host handle: {:?}, domain id: {:?}.", code, host_handle, domain_id)
-            }
-        }
-    }
-
-    /// Shuts down the CLR
-    pub fn shutdown(self: Self) -> io::Result<()> {
-        unsafe {
-            let coreclr_library = UnixCoreClr::library()?;
-            let coreclr_shutdown: libl::Symbol<CoreClrShutdownFn> = coreclr_library.get(b"coreclr_shutdown")?;
-
-            // Shutdown the CLR
-            match coreclr_shutdown(self.host_handle, self.domain_id) {
-                // If healthy exit code, return unit
-                0 => Ok(()),
-                // Else panic
-                _ => panic!("Failed to shutdown")
-            }
-        }
-    }
-
-    /// Shuts down the CLR, returning a latched exit code?  Should follow up on what that is.
-    pub fn shutdown_2(self: Self) -> io::Result<c_int> {
-        let latched_exit_code = -1 as c_int;
-        let latched_exit_code_ref = &latched_exit_code as *const c_int;
-
-        unsafe {
-            let coreclr_library = UnixCoreClr::library()?;
-            let coreclr_shutdown_2: libl::Symbol<CoreClrShutdown2Fn> = coreclr_library.get(b"coreclr_shutdown_2")?;
-
-            // Shutdown the CLR
-            match coreclr_shutdown_2(self.host_handle, self.domain_id, latched_exit_code_ref) {
-                // If healthy exit code, return the resulting exit code
-                0 => Ok(latched_exit_code),
-                // Else panic
-                _ => panic!("Failed to shutdown")
             }
         }
     }
@@ -161,7 +128,7 @@ impl UnixCoreClr {
         let coreclr_delegate_ref = &coreclr_delegate as *const *const c_void;
         
         unsafe {
-            let coreclr_library = UnixCoreClr::library()?;
+            let coreclr_library = UnixCoreClrHost::library()?;
             let coreclr_create_delegate: libl::Symbol<CoreClrCreateDelegateFn> = coreclr_library.get(b"coreclr_create_delegate")?;
 
             // Create the delegate
@@ -175,6 +142,63 @@ impl UnixCoreClr {
             {
                 // If healthy exit code, return the resulting exit code
                 0 => Ok(coreclr_delegate),
+                // Else panic
+                _ => panic!("Failed to shutdown")
+            }
+        }
+    }
+}
+
+impl ClrHost for UnixCoreClrHost {
+    fn get_app_domain_id(self: &Self) -> io::Result<i32> {
+        Ok(self.domain_id as i32)
+    }
+
+    fn shutdown(self: Self) -> io::Result<()> {
+        unsafe {
+            let coreclr_library = UnixCoreClrHost::library()?;
+            let coreclr_shutdown: libl::Symbol<CoreClrShutdownFn> = coreclr_library.get(b"coreclr_shutdown")?;
+
+            // Shutdown the CLR
+            match coreclr_shutdown(self.host_handle, self.domain_id) {
+                // If healthy exit code, return unit
+                0 => Ok(()),
+                // Else panic
+                _ => panic!("Failed to shutdown")
+            }
+        }
+    }
+
+    fn execute_assembly(self: &Self,
+        _assembly_path: &str,
+        _args: Vec<&str>) -> io::Result<i32>
+    {
+        unimplemented!()
+    }
+
+    unsafe fn create_delegate<T>(self: &Self,
+        _assembly_name: &str,
+        _class_name: &str,
+        _method_name: &str) -> io::Result<Box<T>>
+    {
+        unimplemented!()
+    }
+}
+
+impl UnixCoreClrHost {
+    /// Shuts down the CLR, returning a latched exit code?  Should follow up on what "latched exit code" is.
+    pub fn shutdown_2(self: Self) -> io::Result<c_int> {
+        let latched_exit_code = -1 as c_int;
+        let latched_exit_code_ref = &latched_exit_code as *const c_int;
+
+        unsafe {
+            let coreclr_library = UnixCoreClrHost::library()?;
+            let coreclr_shutdown_2: libl::Symbol<CoreClrShutdown2Fn> = coreclr_library.get(b"coreclr_shutdown_2")?;
+
+            // Shutdown the CLR
+            match coreclr_shutdown_2(self.host_handle, self.domain_id, latched_exit_code_ref) {
+                // If healthy exit code, return the resulting exit code
+                0 => Ok(latched_exit_code),
                 // Else panic
                 _ => panic!("Failed to shutdown")
             }

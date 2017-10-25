@@ -8,9 +8,9 @@ pub mod windows;
 #[cfg(unix)]
 pub mod unix;
 
-trait ClrHost {
+pub trait ClrHost {
     fn get_app_domain_id(self: &Self) -> io::Result<i32>;
-    fn stop(self: Self) -> io::Result<()>;
+    fn shutdown(self: Self) -> io::Result<()>;
 
     fn execute_assembly(self: &Self,
         assembly_path: &str,
@@ -36,7 +36,7 @@ pub mod tests {
             Ok(8)
         }
 
-        fn stop(self: Self) -> io::Result<()> {
+        fn shutdown(self: Self) -> io::Result<()> {
             Ok(())
         }
 
@@ -67,6 +67,6 @@ pub mod tests {
                 .unwrap()
         };
         
-        healthy_clr_host.stop().unwrap();
+        healthy_clr_host.shutdown().unwrap();
     }
 }
