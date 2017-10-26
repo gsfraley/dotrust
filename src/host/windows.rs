@@ -46,3 +46,47 @@ com_interface! {
             fn_ptr: *mut *const c_void) -> HRESULT;
     }
 }
+
+// The Windows CoreClr host is a wrapper around the ICLRRuntimeHost2 COM object
+pub struct WindowsCoreClrHost {
+    runtime_host: ICLRRuntimeHost2
+}
+
+impl ClrHost for WindowsCoreClrHost {
+    fn get_app_domain_id(self: &Self) -> io::Result<i32> {
+        let domain_id_ref = *mut DWORD;
+        self.runtime_host.get_current_app_domain_id(domain_id_ref);
+        
+        Ok(*domain_id_ref as i32)
+    }
+
+    fn shutdown(self: Self) -> io::Result<()> {
+        unsafe {
+            let coreclr_library = UnixCoreClrHost::library()?;
+            let coreclr_shutdown: libl::Symbol<CoreClrShutdownFn> = coreclr_library.get(b"coreclr_shutdown")?;
+
+            // Shutdown the CLR
+            match coreclr_shutdown(self.host_handle, self.domain_id) {
+                // If healthy exit code, return unit
+                0 => Ok(()),
+                // Else panic
+                _ => panic!("Failed to shutdown")
+            }
+        }
+    }
+
+    fn execute_assembly(self: &Self,
+        _assembly_path: &str,
+        _args: Vec<&str>) -> io::Result<i32>
+    {
+        unimplemented!()
+    }
+
+    unsafe fn create_delegate<T>(self: &Self,
+        _assembly_name: &str,
+        _class_name: &str,
+        _method_name: &str) -> io::Result<Box<T>>
+    {
+        unimplemented!()
+    }
+}

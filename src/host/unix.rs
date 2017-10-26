@@ -41,7 +41,7 @@ type CoreClrCreateDelegateFn = unsafe extern fn(
     *const c_char,
     *const *const c_void) -> c_int;
 
-/// The CoreClr object represents a binding to the CLR maintained by a private handle and domain id
+/// The UnixCoreClr object represents a binding to the CLR maintained by a private handle and domain id
 pub struct UnixCoreClrHost {
     host_handle: *const c_void,
     domain_id: c_uint
