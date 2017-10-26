@@ -1,10 +1,14 @@
 //! Hosting the CLR from Rust using the Windows hosting API (ICLRRuntimeHost2 from MSCOREE.IDL)
 
+use std::io;
+use std::os::raw::c_void;
+
 use com::IUnknown;
 use winapi::minwindef::DWORD;
 use winapi::winerror::HRESULT;
 use winapi::winnt::LPCWSTR;
-use std::os::raw::c_void;
+
+use super::ClrHost;
 
 iid!(IID_ICLRRUNTIMEHOST = 0x90F1A06C, 0x7712, 0x4762, 0x86, 0xB5, 0x7A, 0x5E, 0xBA, 0x6B, 0xDB, 0x02);
 com_interface! {
@@ -54,25 +58,11 @@ pub struct WindowsCoreClrHost {
 
 impl ClrHost for WindowsCoreClrHost {
     fn get_app_domain_id(self: &Self) -> io::Result<i32> {
-        let domain_id_ref = *mut DWORD;
-        self.runtime_host.get_current_app_domain_id(domain_id_ref);
-        
-        Ok(*domain_id_ref as i32)
+        unimplemented!()
     }
 
     fn shutdown(self: Self) -> io::Result<()> {
-        unsafe {
-            let coreclr_library = UnixCoreClrHost::library()?;
-            let coreclr_shutdown: libl::Symbol<CoreClrShutdownFn> = coreclr_library.get(b"coreclr_shutdown")?;
-
-            // Shutdown the CLR
-            match coreclr_shutdown(self.host_handle, self.domain_id) {
-                // If healthy exit code, return unit
-                0 => Ok(()),
-                // Else panic
-                _ => panic!("Failed to shutdown")
-            }
-        }
+        unimplemented!()
     }
 
     fn execute_assembly(self: &Self,
