@@ -58,7 +58,14 @@ pub struct WindowsCoreClrHost {
 
 impl ClrHost for WindowsCoreClrHost {
     fn get_app_domain_id(self: &Self) -> io::Result<i32> {
-        unimplemented!()
+        let mut app_domain_id = 0;
+
+        unsafe {
+            let app_domain_id_ref = &mut app_domain_id;
+            self.runtime_host.get_current_app_domain_id(app_domain_id_ref);
+        }
+
+        Ok(app_domain_id as i32)
     }
 
     fn shutdown(self: Self) -> io::Result<()> {
