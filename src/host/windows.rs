@@ -5,7 +5,7 @@ use std::os::raw::c_void;
 
 use com::IUnknown;
 use winapi::minwindef::DWORD;
-use winapi::winerror::HRESULT;
+use winapi::winerror::{HRESULT, SUCCEEDED};
 use winapi::winnt::LPCWSTR;
 
 use super::ClrHost;
@@ -62,14 +62,26 @@ impl ClrHost for WindowsCoreClrHost {
 
         unsafe {
             let app_domain_id_ref = &mut app_domain_id;
-            self.runtime_host.get_current_app_domain_id(app_domain_id_ref);
+            let result = self.runtime_host.get_current_app_domain_id(app_domain_id_ref);
+
+            if !SUCCEEDED(result) {
+                panic!("Failed to get current app domain id")
+            }
         }
 
         Ok(app_domain_id as i32)
     }
 
     fn shutdown(self: Self) -> io::Result<()> {
-        unimplemented!()
+        unsafe {
+            let result = self.runtime_host.stop();
+
+            if !SUCCEEDED(result) {
+                panic!("Failed to stop CLR host")
+            }
+        }
+
+        Ok(())
     }
 
     fn execute_assembly(self: &Self,
