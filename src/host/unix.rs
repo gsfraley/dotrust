@@ -5,6 +5,7 @@ extern crate libloading as libl;
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::io::{self, Error, ErrorKind};
+use std::mem;
 use std::os::raw::{c_char, c_int, c_uint, c_void};
 
 use super::ClrHost;
@@ -50,14 +51,16 @@ pub struct UnixCoreClrHost {
 impl UnixCoreClrHost {
     /// Private helper function to grab a reference to the library in the current context
     fn library() -> io::Result<libl::Library> {
-        libl::Library::new("/usr/local/share/dotnet/shared/Microsoft.NETCore.App/2.0.0/libcoreclr.dylib")
+        libl::Library::new(
+            "/usr/local/share/dotnet/shared/Microsoft.NETCore.App/2.0.0/libcoreclr.dylib")
     }
 
     /// Creates a new CLR object
     pub fn init(
-        exe_path: &str,
-        app_domain_friendly_name: &str,
-        properties_option: Option<HashMap<&str, &str>>) -> io::Result<UnixCoreClrHost>
+            exe_path: &str,
+            app_domain_friendly_name: &str,
+            properties_option: Option<HashMap<&str, &str>>)
+            -> io::Result<UnixCoreClrHost>
     {
         // Create the host handle and its ref
         let host_handle = 0 as *const c_void;
@@ -116,37 +119,6 @@ impl UnixCoreClrHost {
             }
         }
     }
-
-    /// Spins a raw delegate pointer out of the CLR
-    pub fn create_raw_delegate(
-        self: &Self,
-        entry_point_assembly_name: &str,
-        entry_point_type_name: &str,
-        entry_point_method_name: &str) -> io::Result<*const c_void>
-    {
-        let coreclr_delegate = 0 as *const c_void;
-        let coreclr_delegate_ref = &coreclr_delegate as *const *const c_void;
-        
-        unsafe {
-            let coreclr_library = UnixCoreClrHost::library()?;
-            let coreclr_create_delegate: libl::Symbol<CoreClrCreateDelegateFn> = coreclr_library.get(b"coreclr_create_delegate")?;
-
-            // Create the delegate
-            match coreclr_create_delegate(
-                self.host_handle,
-                self.domain_id,
-                to_c_str(entry_point_assembly_name),
-                to_c_str(entry_point_type_name),
-                to_c_str(entry_point_method_name),
-                coreclr_delegate_ref)
-            {
-                // If healthy exit code, return the resulting exit code
-                0 => Ok(coreclr_delegate),
-                // Else error out
-                _ => Err(Error::new(ErrorKind::Other, "Failed to shutdown"))
-            }
-        }
-    }
 }
 
 impl ClrHost for UnixCoreClrHost {
@@ -179,11 +151,30 @@ impl ClrHost for UnixCoreClrHost {
 
     unsafe fn create_delegate<T>(
         self: &Self,
-        _assembly_name: &str,
-        _class_name: &str,
-        _method_name: &str) -> io::Result<Box<T>>
+        assembly_name: &str,
+        class_name: &str,
+        method_name: &str) -> io::Result<Box<T>>
     {
-        unimplemented!()
+        let delegate_handle = 0 as *const c_void;
+        let delegate_handle_ref = &delegate_handle as *const *const c_void;
+
+        let coreclr_library = UnixCoreClrHost::library()?;
+        let coreclr_create_delegate: libl::Symbol<CoreClrCreateDelegateFn> = coreclr_library.get(b"coreclr_create_delegate")?;
+
+        // Shutdown the CLR
+        match coreclr_create_delegate(
+            self.host_handle, self.domain_id,
+            to_c_str(assembly_name), to_c_str(class_name), to_c_str(method_name),
+            delegate_handle_ref)
+        {
+            // If healthy exit code, return unit
+            0 => {
+                let delegate_handle_box = mem::transmute::<Box<*const c_void>,Box<T>>(Box::from(delegate_handle));
+                Ok(delegate_handle_box)
+            },
+            // Else error out
+            _ => Err(Error::new(ErrorKind::Other, "Failed to create delegate"))
+        }
     }
 }
 
