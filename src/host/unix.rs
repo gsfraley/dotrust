@@ -4,7 +4,7 @@ extern crate libloading as libl;
 
 use std::collections::HashMap;
 use std::ffi::CString;
-use std::io;
+use std::io::{self, Error, ErrorKind};
 use std::os::raw::{c_char, c_int, c_uint, c_void};
 
 use super::ClrHost;
@@ -49,7 +49,7 @@ pub struct UnixCoreClrHost {
 
 impl UnixCoreClrHost {
     /// Private helper function to grab a reference to the library in the current context
-    fn library() -> libl::Result<libl::Library> {
+    fn library() -> io::Result<libl::Library> {
         libl::Library::new("/usr/local/share/dotnet/shared/Microsoft.NETCore.App/2.0.0/libcoreclr.dylib")
     }
 
@@ -57,7 +57,7 @@ impl UnixCoreClrHost {
     pub fn init(
         exe_path: &str,
         app_domain_friendly_name: &str,
-        properties_option: Option<HashMap<&str, &str>>) -> libl::Result<UnixCoreClrHost>
+        properties_option: Option<HashMap<&str, &str>>) -> io::Result<UnixCoreClrHost>
     {
         // Create the host handle and its ref
         let host_handle = 0 as *const c_void;
@@ -111,8 +111,8 @@ impl UnixCoreClrHost {
                     host_handle: host_handle,
                     domain_id: domain_id
                 }),
-                // Else panic
-                code => panic!("Failed to initialize ({:X}).  Host handle: {:?}, domain id: {:?}.", code, host_handle, domain_id)
+                // Else error out
+                code => Err(Error::new(ErrorKind::Other, format!("Failed to initialize ({:X}).  Host handle: {:?}, domain id: {:?}.", code, host_handle, domain_id)))
             }
         }
     }
@@ -142,8 +142,8 @@ impl UnixCoreClrHost {
             {
                 // If healthy exit code, return the resulting exit code
                 0 => Ok(coreclr_delegate),
-                // Else panic
-                _ => panic!("Failed to shutdown")
+                // Else error out
+                _ => Err(Error::new(ErrorKind::Other, "Failed to shutdown"))
             }
         }
     }
@@ -163,20 +163,22 @@ impl ClrHost for UnixCoreClrHost {
             match coreclr_shutdown(self.host_handle, self.domain_id) {
                 // If healthy exit code, return unit
                 0 => Ok(()),
-                // Else panic
-                _ => panic!("Failed to shutdown")
+                // Else error out
+                _ => Err(Error::new(ErrorKind::Other, "Failed to shutdown"))
             }
         }
     }
 
-    fn execute_assembly(self: &Self,
+    fn execute_assembly(
+        self: &Self,
         _assembly_path: &str,
         _args: Vec<&str>) -> io::Result<i32>
     {
         unimplemented!()
     }
 
-    unsafe fn create_delegate<T>(self: &Self,
+    unsafe fn create_delegate<T>(
+        self: &Self,
         _assembly_name: &str,
         _class_name: &str,
         _method_name: &str) -> io::Result<Box<T>>
@@ -199,8 +201,8 @@ impl UnixCoreClrHost {
             match coreclr_shutdown_2(self.host_handle, self.domain_id, latched_exit_code_ref) {
                 // If healthy exit code, return the resulting exit code
                 0 => Ok(latched_exit_code),
-                // Else panic
-                _ => panic!("Failed to shutdown")
+                // Else error out
+                _ => Err(Error::new(ErrorKind::Other, "Failed to shutdown"))
             }
         }
     }
