@@ -61,7 +61,7 @@ impl UnixCoreClrHost {
             properties: HashMap<&str, &str>)
             -> io::Result<UnixCoreClrHost>
     {
-        let exe_path = current_exe().unwrap();
+        let exe_path = current_exe()?;
         let exe_path_str = exe_path.to_str().unwrap();
 
         // Create the host handle and its ref
