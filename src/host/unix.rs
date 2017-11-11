@@ -3,6 +3,7 @@
 extern crate libloading as libl;
 
 use std::collections::HashMap;
+use std::env::current_exe;
 use std::ffi::CString;
 use std::io::{self, Error, ErrorKind};
 use std::mem;
@@ -11,7 +12,6 @@ use std::os::raw::{c_char, c_int, c_uint, c_void};
 use super::ClrHost;
 
 
-// -- Private utility functions -- //
 fn to_c_str<T: Into<Vec<u8>>>(t: T) -> *const c_char {
     CString::new(t).unwrap().as_ptr() as *const c_char
 }
@@ -57,11 +57,13 @@ impl UnixCoreClrHost {
 
     /// Creates a new CLR object
     pub fn init(
-            exe_path: &str,
             app_domain_friendly_name: &str,
-            properties_option: Option<HashMap<&str, &str>>)
+            properties: HashMap<&str, &str>)
             -> io::Result<UnixCoreClrHost>
     {
+        let exe_path = current_exe().unwrap();
+        let exe_path_str = exe_path.to_str().unwrap();
+
         // Create the host handle and its ref
         let host_handle = 0 as *const c_void;
         let host_handle_ref = &host_handle as *const *const c_void;
@@ -71,11 +73,8 @@ impl UnixCoreClrHost {
         let domain_id_ref = &domain_id as *const c_uint;
 
         // Raw C string refs from exe_path and app_domain_friendly_name slices
-        let exe_path_raw = to_c_str(exe_path);
+        let exe_path_raw = to_c_str(exe_path_str);
         let app_domain_friendly_name_raw = to_c_str(app_domain_friendly_name);
-
-        // Either use the provided option or a blank hashmap
-        let properties = properties_option.unwrap_or_else(HashMap::new);
 
         // Count for upcoming vecs
         let properties_count = properties.len() as c_int;
